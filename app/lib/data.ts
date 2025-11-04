@@ -1,4 +1,5 @@
-import postgres from 'postgres';
+//import postgres from 'postgres';
+import sql from './db';
 import {
   CustomerField,
   CustomersTableType,
@@ -9,7 +10,7 @@ import {
 } from './definitions';
 import { formatCurrency } from './utils';
 
-const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
+//const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
 export async function fetchRevenue() {
   try {
@@ -19,11 +20,12 @@ export async function fetchRevenue() {
     // console.log('Fetching revenue data...');
     // await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    const data = await sql<Revenue[]>`SELECT * FROM revenue`;
+    const data = await sql`SELECT * FROM revenue`;
 
     // console.log('Data fetch completed after 3 seconds.');
 
     return data;
+
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch revenue data.');
@@ -32,12 +34,13 @@ export async function fetchRevenue() {
 
 export async function fetchLatestInvoices() {
   try {
-    const data = await sql<LatestInvoiceRaw[]>`
+    const data = await sql`
       SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
       FROM invoices
       JOIN customers ON invoices.customer_id = customers.id
       ORDER BY invoices.date DESC
       LIMIT 5`;
+
 
     const latestInvoices = data.map((invoice) => ({
       ...invoice,
@@ -55,8 +58,8 @@ export async function fetchCardData() {
     // You can probably combine these into a single SQL query
     // However, we are intentionally splitting them to demonstrate
     // how to initialize multiple queries in parallel with JS.
-    const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
-    const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
+    const invoiceCountPromise = sql`SELECT COUNT(*) as count FROM invoices`;
+    const customerCountPromise = sql`SELECT COUNT(*) as count FROM customers`;
     const invoiceStatusPromise = sql`SELECT
          SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
@@ -68,10 +71,14 @@ export async function fetchCardData() {
       invoiceStatusPromise,
     ]);
 
+
     const numberOfInvoices = Number(data[0][0].count ?? '0');
     const numberOfCustomers = Number(data[1][0].count ?? '0');
     const totalPaidInvoices = formatCurrency(data[2][0].paid ?? '0');
     const totalPendingInvoices = formatCurrency(data[2][0].pending ?? '0');
+
+
+    console.log(`Tipo de objeto data ${data[0]}`);
 
     return {
       numberOfCustomers,
@@ -93,7 +100,7 @@ export async function fetchFilteredInvoices(
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
-    const invoices = await sql<InvoicesTable[]>`
+    const invoices = await sql`
       SELECT
         invoices.id,
         invoices.amount,
@@ -144,7 +151,7 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
   try {
-    const data = await sql<InvoiceForm[]>`
+    const data = await sql`
       SELECT
         invoices.id,
         invoices.customer_id,
@@ -169,7 +176,7 @@ export async function fetchInvoiceById(id: string) {
 
 export async function fetchCustomers() {
   try {
-    const customers = await sql<CustomerField[]>`
+    const customers = await sql`
       SELECT
         id,
         name
@@ -186,7 +193,7 @@ export async function fetchCustomers() {
 
 export async function fetchFilteredCustomers(query: string) {
   try {
-    const data = await sql<CustomersTableType[]>`
+    const data = await sql`
 		SELECT
 		  customers.id,
 		  customers.name,

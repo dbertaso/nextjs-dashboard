@@ -1,0 +1,4 @@
+{
+  "$schema": "https://www.schemastore.org/eslintrc.json",
+  "extends": "next/core-web-vitals"
+}
